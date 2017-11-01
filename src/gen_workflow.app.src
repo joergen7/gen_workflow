@@ -1,5 +1,5 @@
 {application, gen_workflow,
- [{description, "An OTP library"},
+ [{description, "A behavior for specifying data analysis applications in Erlang."},
   {vsn, "0.1.0"},
   {registered, []},
   {applications,
@@ -7,9 +7,11 @@
     stdlib
    ]},
   {env,[]},
-  {modules, []},
+  {modules, [gen_workflow]},
 
-  {maintainers, []},
+  {maintainers, ["Jorgen Brandt"]},
   {licenses, ["Apache 2.0"]},
-  {links, []}
+  {links, [
+           {"GitHub", "https://github.com/joergen7/gen_pnet/"}
+          ]}
  ]}.
