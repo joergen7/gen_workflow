@@ -1,3 +1,27 @@
+%% -*- erlang -*-
+%%
+%% A behavior for specifying data analysis applications in Erlang.
+%%
+%% Copyright 2017 Jörgen Brandt
+%%
+%% Licensed under the Apache License, Version 2.0 (the "License");
+%% you may not use this file except in compliance with the License.
+%% You may obtain a copy of the License at
+%%
+%%     http://www.apache.org/licenses/LICENSE-2.0
+%%
+%% Unless required by applicable law or agreed to in writing, software
+%% distributed under the License is distributed on an "AS IS" BASIS,
+%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%% See the License for the specific language governing permissions and
+%% limitations under the License.
+%%
+%% -------------------------------------------------------------------
+%% @author Jörgen Brandt <joergen.brandt@onlinehome.de>
+%% @version 0.1.0
+%% @copyright 2017 Jörgen Brandt
+%% -------------------------------------------------------------------
+
 -module( gen_workflow ).
 
 
@@ -12,11 +36,15 @@
 %% Expression constructors
 -export( [lam_ntv_arg/3, app_arg/2] ).
 -export( [str/1, file/1, true/0, false/0, cnd/3, var/1, lam_ntv/2, app/2] ).
+-export( [str/2, file/2, true/1, false/1, cnd/4, var/2, lam_ntv/3, app/3] ).
 
 
 %%====================================================================
 %% Type definitions
 %%====================================================================
+
+-type info() :: na
+              | {string(), pos_integer()}.
 
 -type s() :: string().
 
@@ -38,14 +66,14 @@
 
 -type app_arg() :: {s(), e()}.
 
--type e() :: {str, s()}
-           | {file, s()}
-           | true
-           | false
-           | {cnd, e(), e(), e()}
-           | x
-           | {lam, ntv, [lam_ntv_arg()], e()}
-           | {app, e(), [app_arg()]}.
+-type e() :: {str, info(), s()}
+           | {file, info(), s()}
+           | {true, info()}
+           | {false, info()}
+           | {cnd, info(), e(), e(), e()}
+           | {var, info(), x()}
+           | {lam_ntv, info(), [lam_ntv_arg()], e()}
+           | {app, info(), e(), [app_arg()]}.
 
 
 %%====================================================================
@@ -91,7 +119,7 @@ when Tau =:= ntv orelse Tau =:= frn,
 -spec lam_ntv_arg( X :: x(), S :: s(), T :: t() ) -> lam_ntv_arg().
 
 lam_ntv_arg( X, S, T )
-when is_atom( X ), X =/= true, X =/= false,
+when is_atom( X ),
      is_list( S ) ->
   {X, S, T}.
 
@@ -104,48 +132,108 @@ app_arg( S, E ) when is_list( S ) ->
 
 -spec str( S :: s() ) -> e().
 
-str( S ) when is_list( S ) ->
-  {str, S}.
+str( S ) ->
+  str( na, S ).
+
+
+-spec str( Info :: info(), S :: s() ) -> e().
+
+str( Info, S )
+when Info =:= na orelse is_tuple( Info ),
+     is_list( S ) ->
+  {str, Info, S}.
 
 
 -spec file( S :: s() ) -> e().
 
-file( S ) when is_list( S ) ->
-  {file, S}.
+file( S ) ->
+  file( na, S ).
+
+
+-spec file( Info :: info(), S :: s() ) -> e().
+
+file( Info, S )
+when Info =:= na orelse is_tuple( Info ),
+     is_list( S ) ->
+  {file, Info, S}.
 
 
 -spec true() -> e().
 
 true() ->
-  true.
+  true( na ).
+
+
+-spec true( Info :: info() ) -> e().
+
+true( Info )
+when Info =:= na orelse is_tuple( Info ) ->
+  {true, Info}.
 
 
 -spec false() -> e().
 
 false() ->
-  false.
+  false( na ).
+
+
+-spec false( Info :: info() ) -> e().
+
+false( Info )
+when Info =:= na orelse is_tuple( Info ) ->
+  {false, Info}.
 
 
 -spec cnd( EIf :: e(), EThen :: e(), EElse :: e() ) -> e().
 
 cnd( EIf, EThen, EElse ) ->
-  {cnd, EIf, EThen, EElse}.
+  cnd( na, EIf, EThen, EElse ).
+
+
+-spec cnd( Info :: info(), EIf :: e(), EThen :: e(), EElse :: e() ) -> e().
+
+cnd( Info, EIf, EThen, EElse )
+when Info =:= na orelse is_tuple( Info ) ->
+  {cnd, Info, EIf, EThen, EElse}.
   
 
 -spec var( X :: x() ) -> e().
 
-var( X )
-when is_atom( X ), X =/= true, X =/= false ->
-  X.
+var( X ) ->
+  var( na, X ).
+
+
+-spec var( Info :: info(), X :: x() ) -> e().
+
+var( Info, X )
+when Info =:= na orelse is_tuple( Info ),
+     is_atom( X ) ->
+  {var, Info, X}.
 
 
 -spec lam_ntv( ArgLst :: [lam_ntv_arg()], EBody :: e() ) -> e().
 
-lam_ntv( ArgLst, EBody ) when is_list( ArgLst ) ->
-  {lam, ntv, ArgLst, EBody}.
+lam_ntv( ArgLst, EBody ) ->
+  lam_ntv( na, ArgLst, EBody ).
+
+
+-spec lam_ntv( Info :: info(), ArgLst :: [lam_ntv_arg()], EBody :: e() ) -> e().
+
+lam_ntv( Info, ArgLst, EBody )
+when Info =:= na orelse is_tuple( Info ),
+     is_list( ArgLst ) ->
+  {lam_ntv, Info, ArgLst, EBody}.
 
 
 -spec app( F :: e(), ArgLst :: [app_arg()] ) -> e().
 
-app( F, ArgLst ) when is_list( ArgLst ) ->
-  {app, F, ArgLst}.
+app( F, ArgLst ) ->
+  app( na, F, ArgLst ).
+
+
+-spec app( Info :: info(), F :: e(), ArgLst :: [app_arg()] ) -> e().
+
+app( Info, F, ArgLst )
+when Info =:= na orelse is_tuple( Info ),
+     is_list( ArgLst ) ->
+  {app, Info, F, ArgLst}.
