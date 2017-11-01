@@ -7,7 +7,7 @@
     stdlib
    ]},
   {env,[]},
-  {modules, [gen_workflow]},
+  {modules, [gen_workflow, gen_workflow_lang]},
 
   {maintainers, ["Jorgen Brandt"]},
   {licenses, ["Apache 2.0"]},
