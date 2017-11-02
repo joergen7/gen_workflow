@@ -24,6 +24,7 @@
 
 -module( gen_workflow ).
 -behaviour( cre_client ).
+-include_lib( "gen_workflow.hrl" ).
 
 
 %%====================================================================
@@ -31,17 +32,6 @@
 %%====================================================================
 
 -export( [init/1, is_value/2, recv/4, step/2] ).
--export( [reduce/1] ).
--export( [subst/3, in_hole/2, find_context/2, subst_fut/3] ).
-
-
-%%====================================================================
-%% Type definitions
-%%====================================================================
-
--type ctx() :: hole
-             | {cnd, info(), ctx(), e(), e()}
-             | {app, info(), ctx(), [app_arg()]}.
 
 
 %%====================================================================
@@ -72,119 +62,28 @@ when E       :: e(),
      UsrInfo :: _.
 
 recv( E, A, Delta, _UsrInfo ) ->
-  subst_fut( E, A, Delta ).
+  gen_workflow_sem:subst_fut( E, A, Delta ).
 
 
--spec step( E, UsrInfo ) -> {ok, e()} | {ok_send, e(), e()} | norule
+-spec step( E, UsrInfo ) -> Result
 when E       :: e(),
-     UsrInfo :: _.
+     UsrInfo :: _,
+     Result  :: {ok, e()}
+              | {ok_send, e(), e()}
+              | norule.
+
 
 step( E, _UsrInfo ) ->
-  case find_context( E, hole ) of
-    {ok, E, Ctx} -> {ok, in_hole( reduce( E ), Ctx )};
-    norule       -> norule
+  case gen_workflow_sem:find_context( E, hole ) of
+
+    {ok, E, Ctx} ->
+      E1 = gen_workflow_sem:reduce( E ),
+      E2 = gen_workflow_sem:in_hole( E1, Ctx ),
+      {ok, E2};
+
+    no_ctx ->
+      norule
+
   end.
-
-
-%%====================================================================
-%% Notion of reduction
-%%====================================================================
-
--spec reduce( E :: e() ) -> e().
-
-reduce( {cnd, _, {true, _}, EThen, _} ) ->
-  EThen;
-
-reduce( {cnd, _, {false, _}, _, EElse} ) ->
-  EElse;
-
-reduce( {app, _, {lam_ntv, _, [], EBody}, []} ) ->
-  EBody;
-
-reduce( {app, AppInfo,
-              {lam_ntv, LamInfo, [{X, S, T}|LamArgTl], EBody},
-              [{S, E}|AppArgTl]} ) ->
-  EBody1 = subst( EBody, X, E ),
-  EFn1 = {lam_ntv, LamInfo, LamArgTl, EBody1},
-  {app, AppInfo, EFn1, AppArgTl}.
-  
-
-%%====================================================================
-%% Helper functions
-%%====================================================================
-
--spec subst( E1, X, E2 ) -> e()
-when E1 :: e(),
-     X  :: x(),
-     E2 :: e().
-
-subst( _, _, _ ) -> error( nyi ).
-
-
--spec in_hole( E , Ctx ) -> e()
-when E   :: e(),
-     Ctx :: ctx().
-
-in_hole( E, hole ) ->
-  E;
-
-in_hole( E, {cnd, Info, EIf, EThen, EElse} ) ->
-  {cnd, Info, in_hole( E, EIf ), EThen, EElse};
-
-in_hole( E, {app, Info, EFn, ArgLst} ) ->
-  {app, Info, in_hole( E, EFn), ArgLst}.
-
-
--spec find_context( E, Ctx ) -> {ok, e(), ctx()} | no_ctx.
-when E   :: e(),
-     Ctx :: ctx().
-
-find_context( E, Ctx ) ->
-  try try_context( E, Ctx ) of
-    no_ctx -> no_ctx
-  catch
-    throw:{E1, Ctx1} -> {ok, E1, Ctx1}
-  end.
-
-
--spec subst_fut( E, A, Delta ) -> e()
-when E     :: e(),
-     A     :: e(),
-     Delta :: e().
-
-subst_fut( _, _, _ ) -> error( nyi ).
-
-%%====================================================================
-%% Internal functions
-%%====================================================================
-
--spec try_context( E, Ctx ) -> no_ctx
-when E   :: e(),
-     Ctx :: ctx().
-
-try_context( {str, _, _}, _ )        -> no_ctx;
-try_context( {file, _, _}, _ )       -> no_ctx;
-try_context( {true, _}, _ )          -> no_ctx;
-try_context( {false, _}, _ )         -> no_ctx;
-
-try_context( E = {cnd, _, {true, _}, _, _}, Ctx ) ->
-  throw( {E, Ctx} );
-
-try_context( E = {cnd, _, {false, _}, _, _}, Ctx ) ->
-  throw( {E, Ctx} );
-
-try_context( {cnd, Info, EIf, EThen, EElse}, Ctx ) ->
-  Ctx1 = in_hole( {cnd, Info, hole, EThen, EElse}, Ctx ),
-  try_context( EIf, Ctx1 );
-
-try_context( {var, _, _}, _ )        -> no_ctx;
-try_context( {lam_ntv, _, _, _}, _ ) -> no_ctx;
-
-try_context( E = {app, _, {lam_ntv, _, _, _}, _}, Ctx ) ->
-  throw( {E, Ctx} );
-
-try_context( {app, Info, EFn, ArgLst}, Ctx ) ->
-  Ctx1 = in_hole( {app, Info, hole, ArgLst}, Ctx ),
-  try_context( EFn, Ctx1 ).
 
 

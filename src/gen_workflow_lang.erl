@@ -23,7 +23,7 @@
 %% -------------------------------------------------------------------
 
 -module( gen_workflow_lang ).
-
+-include_lib( "gen_workflow.hrl" ).
 
 %%====================================================================
 %% Exports
@@ -37,43 +37,6 @@
 -export( [lam_ntv_arg/3, app_arg/2] ).
 -export( [str/1, file/1, true/0, false/0, cnd/3, var/1, lam_ntv/2, app/2] ).
 -export( [str/2, file/2, true/1, false/1, cnd/4, var/2, lam_ntv/3, app/3] ).
-
-
-%%====================================================================
-%% Type definitions
-%%====================================================================
-
--type info() :: na
-              | {string(), pos_integer()}.
-
--type s() :: string().
-
--type x() :: atom().
-
-
--type tau() :: ntv
-             | frn.
-
--type t_fn_arg() :: {s(), t()}.
-
--type t() :: 'Str'
-           | 'File'
-           | 'Bool'
-           | {'Fn', tau(), [t_fn_arg()], t()}.
-
-
--type lam_ntv_arg() :: {x(), s(), t()}.
-
--type app_arg() :: {s(), e()}.
-
--type e() :: {str, info(), s()}
-           | {file, info(), s()}
-           | {true, info()}
-           | {false, info()}
-           | {cnd, info(), e(), e(), e()}
-           | {var, info(), x()}
-           | {lam_ntv, info(), [lam_ntv_arg()], e()}
-           | {app, info(), e(), [app_arg()]}.
 
 
 %%====================================================================
