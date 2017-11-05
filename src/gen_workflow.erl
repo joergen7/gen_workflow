@@ -45,14 +45,8 @@ init( _ClientArg ) -> [].
 
 -spec is_value( E :: e(), UsrInfo :: _ ) -> boolean().
 
-is_value( {str, _, _}, _ )        -> true;
-is_value( {file, _, _}, _ )       -> true;
-is_value( {true, _}, _ )          -> true;
-is_value( {false, _}, _ )         -> true;
-is_value( {cnd, _, _, _, _}, _ )  -> false;
-is_value( {var, _, _}, _ )        -> false;
-is_value( {lam_ntv, _, _, _}, _ ) -> true;
-is_value( {app, _, _, _}, _ )     -> false.
+is_value( E, _ ) ->
+  gen_workflow_sem:is_value( E ).
 
 
 -spec recv( E, A, Delta, UsrInfo ) -> e()
