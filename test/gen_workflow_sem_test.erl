@@ -29,6 +29,7 @@
 %% Imports
 %%====================================================================
 
+-import( gen_workflow_sem, [reduce/1] ).
 -import( gen_workflow_sem,  [is_value/1, rename/3, subst/3, gensym/1] ).
 -import( gen_workflow_lang, [t_str/0, t_file/0, t_bool/0, t_fn/3] ).
 -import( gen_workflow_lang, [lam_ntv_arg/3, app_arg/2] ).
@@ -55,6 +56,51 @@ e_lam_id() ->
 
 e_app_id() ->
   app( e_lam_id(), [app_arg( "x", str( "blub" ) )] ).
+
+%%====================================================================
+%% Notion of reduction
+%%====================================================================
+
+reduce_test_() ->
+  {foreach,
+
+   fun() -> ok end,
+   fun( _ ) -> ok end,
+
+   [
+    {"condition with true if expression reduces to then expression",
+     fun cnd_with_true_if_expr_reduces_to_then_expr/0},
+
+    {"condition with false if expression reduces to then expression",
+     fun cnd_with_false_if_expr_reduces_to_then_expr/0},
+
+    {"native application without arguments reduces to lambda body",
+     fun nat_app_without_arg_reduces_to_lam_body/0},
+
+    {"native application with single argument reduces to empty application",
+     fun nat_app_with_single_arg_reduces_to_empty_application/0}
+   ]
+  }.
+
+cnd_with_true_if_expr_reduces_to_then_expr() ->
+  ETrue = str( "blub" ),
+  E1 = cnd( true(), ETrue, str( "bla" ) ),
+  ?assertEqual( ETrue, reduce( E1 ) ).
+
+cnd_with_false_if_expr_reduces_to_then_expr() ->
+  EFalse = str( "bla" ),
+  E1 = cnd( false(), str( "blub" ), EFalse ),
+  ?assertEqual( EFalse, reduce( E1 ) ).
+
+nat_app_without_arg_reduces_to_lam_body() ->
+  E1 = app( e_lam_const(), [] ),
+  E2 = str( "blub" ),
+  ?assertEqual( E2, reduce( E1 ) ).
+
+nat_app_with_single_arg_reduces_to_empty_application() ->
+  E1 = e_app_id(),
+  E2 = app( lam_ntv( [], str( "blub") ), [] ),
+  ?assertEqual( E2, reduce( E1 ) ).
 
 
 %%====================================================================
@@ -320,7 +366,7 @@ subst_is_capture_avoiding() ->
 
 subst_retains_order_of_lam_ntv_arg_lst() ->
   ?assertMatch( {lam_ntv, na, [{X, "x", 'Str'},
-                               {Y, "y", 'File'}], {var, na, X}},
+                               {_, "y", 'File'}], {var, na, X}},
                 subst( e_lam1(), a, var( b ) ) ).
 
 subst_propagates_to_app_function() ->
