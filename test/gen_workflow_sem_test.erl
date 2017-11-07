@@ -30,7 +30,9 @@
 %%====================================================================
 
 -import( gen_workflow_sem, [reduce/1] ).
--import( gen_workflow_sem,  [is_value/1, rename/3, subst/3, gensym/1] ).
+-import( gen_workflow_sem, [is_value/1, rename/3, subst/3, gensym/1] ).
+-import( gen_workflow_sem, [in_hole/2] ).
+
 -import( gen_workflow_lang, [t_str/0, t_file/0, t_bool/0, t_fn/3] ).
 -import( gen_workflow_lang, [lam_ntv_arg/3, app_arg/2] ).
 -import( gen_workflow_lang, [str/1, file/1, true/0, false/0, cnd/3, var/1,
@@ -409,3 +411,19 @@ gensym_replaces_unique_number_instead_of_appending() ->
 %%====================================================================
 %% Evaluation contexts
 %%====================================================================
+
+in_hole_test_() ->
+  {foreach,
+
+   fun() -> ok end,
+   fun( _ ) -> ok end,
+
+   [
+    {"inserting in the empty context returns the original expression",
+     fun insert_in_empty_ctx_returns_original_expr/0}
+   ]
+  }.
+
+insert_in_empty_ctx_returns_original_expr() ->
+  E = str( "blub" ),
+  ?assertEqual( E, in_hole( E, hole ) ).
