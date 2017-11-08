@@ -65,15 +65,24 @@ when is_integer( NWrk ), NWrk > 0 ->
   % start CRE application
   ok = cre:start(),
 
+  % determine CRE master pid
+  {ok, CreName} = cre:pid( node() ),
+
   % start Cuneiform workers
+  ok = cf_worker:start(),
   
-
-
   % start CRE client
+  {ok, Client} = cre_client:start_link( CreName, ?MODULE, [] ),
 
+  Result = cre_client:eval( Client, E ),
+
+  % stop workers
+  ok = application:stop( cf_worker ),
 
   % stop CRE application
-  ok = application:stop( cre ).
+  ok = application:stop( cre ),
+
+  Result.
 
 
 %%====================================================================
