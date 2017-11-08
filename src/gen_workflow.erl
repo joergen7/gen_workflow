@@ -31,6 +31,7 @@
 %% Exports
 %%====================================================================
 
+-export( [run_expr/2, run_module/2] ).
 -export( [init/1, is_value/2, recv/4, step/2] ).
 
 
@@ -39,6 +40,40 @@
 %%====================================================================
 
 -callback query() -> e().
+
+
+%%====================================================================
+%% API functions
+%%====================================================================
+
+-spec run_module( Mod, NWrk ) -> e()
+when Mod  :: atom(),
+     NWrk :: pos_integer().
+
+run_module( Mod, NWrk )
+when is_atom( Mod ) ->
+  run_expr( Mod:query(), NWrk ).
+
+
+-spec run_expr( E, NWrk ) -> e()
+when E    :: e(),
+     NWrk :: pos_integer().
+
+run_expr( E, NWrk )
+when is_integer( NWrk ), NWrk > 0 ->
+
+  % start CRE application
+  ok = cre:start(),
+
+  % start Cuneiform workers
+  
+
+
+  % start CRE client
+
+
+  % stop CRE application
+  ok = application:stop( cre ).
 
 
 %%====================================================================
