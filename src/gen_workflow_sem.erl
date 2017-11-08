@@ -32,7 +32,7 @@
 -export( [reduce/1] ).
 -export( [is_value/1] ).
 -export( [rename/3, subst/3, subst_fut/3, gensym/1] ).
--export( [in_hole/2, find_context/2] ).
+-export( [in_hole/2, find_context/1] ).
 
 
 %%====================================================================
@@ -41,16 +41,16 @@
 
 -spec reduce( E :: e() ) -> e().
 
-reduce( {cnd, _, {true, _}, EThen, _} ) ->
+reduce( {cnd, _, {true, _}, EThen, _} ) ->                     % E-true
   EThen;
 
-reduce( {cnd, _, {false, _}, _, EElse} ) ->
+reduce( {cnd, _, {false, _}, _, EElse} ) ->                    % E-false
   EElse;
 
-reduce( {app, _, {lam_ntv, _, [], EBody}, []} ) ->
+reduce( {app, _, {lam_ntv, _, [], EBody}, []} ) ->             % E-beta-base
   EBody;
 
-reduce( {app, AppInfo,
+reduce( {app, AppInfo,                                         % E-beta
               {lam_ntv, LamInfo, [{X, S, _}|LamArgTl], EBody},
               [{S, E}|AppArgTl]} ) ->
   EBody1 = subst( EBody, X, E ),
@@ -184,18 +184,23 @@ in_hole( E, hole ) ->
   E;
 
 in_hole( E, {cnd, Info, EIf, EThen, EElse} ) ->
+  % note that we do not traverse the then- and else expressions because there
+  % can never be a hole down these two roads
   {cnd, Info, in_hole( E, EIf ), EThen, EElse};
 
+% TODO: first check for foreignness
+% in_hole( E, {app, Info, {lam_frn, ...}, ArgLst} ) -> ...
+
 in_hole( E, {app, Info, EFn, ArgLst} ) ->
-  {app, Info, in_hole( E, EFn), ArgLst}.
+  % note that we do not traverse the argument list because unless the function
+  % expression is a foreign function, the hole must be left hand
+  {app, Info, in_hole( E, EFn ), ArgLst}.
 
 
--spec find_context( E, Ctx ) -> {ok, e(), ctx()} | no_ctx
-when E   :: e(),
-     Ctx :: ctx().
+-spec find_context( E :: e() ) -> {ok, e(), ctx()} | no_ctx.
 
-find_context( E, Ctx ) ->
-  try try_context( E, Ctx ) of
+find_context( E ) ->
+  try try_context( E, hole ) of
     no_ctx -> no_ctx
   catch
     throw:{E1, Ctx1} -> {ok, E1, Ctx1}

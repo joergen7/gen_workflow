@@ -31,7 +31,7 @@
 
 -import( gen_workflow_sem, [reduce/1] ).
 -import( gen_workflow_sem, [is_value/1, rename/3, subst/3, gensym/1] ).
--import( gen_workflow_sem, [in_hole/2] ).
+-import( gen_workflow_sem, [in_hole/2, find_context/1] ).
 
 -import( gen_workflow_lang, [t_str/0, t_file/0, t_bool/0, t_fn/3] ).
 -import( gen_workflow_lang, [lam_ntv_arg/3, app_arg/2] ).
@@ -190,6 +190,9 @@ rename_test_() ->
     {"rename propagates to native lambda argument binding",
      fun rename_propagates_to_lam_ntv_arg_lst/0},
 
+    {"rename leaves non-matching lambda argument alone",
+     fun rename_leaves_nonmatching_lam_ntv_arg_alone/0},
+
     {"rename propagates to native lambda body",
      fun rename_propagates_to_lam_ntv_body/0},
 
@@ -246,6 +249,10 @@ rename_propagates_to_lam_ntv_arg_lst() ->
   E1 = lam_ntv( [lam_ntv_arg( x, "x", t_str() )], str( "blub" ) ),
   E2 = lam_ntv( [lam_ntv_arg( y, "x", t_str() )], str( "blub" ) ),
   ?assertEqual( E2, rename( E1, x, y ) ).
+
+rename_leaves_nonmatching_lam_ntv_arg_alone() ->
+  E = lam_ntv( [lam_ntv_arg( z, "z", t_str() )], str( "blub" ) ),
+  ?assertEqual( E, rename( E, x, y ) ).
 
 rename_propagates_to_lam_ntv_body() ->
   E1 = lam_ntv( [], var( x ) ),
@@ -420,10 +427,111 @@ in_hole_test_() ->
 
    [
     {"inserting in the empty context returns the original expression",
-     fun insert_in_empty_ctx_returns_original_expr/0}
+     fun insert_in_empty_ctx_returns_original_expr/0},
+
+    {"inserting traverses conditional's if expression",
+     fun insert_traverses_cnd_if_expr/0},
+
+    {"inserting traverses non-foreign application's function position",
+     fun insert_traverses_non_frn_app_fun_pos/0}
    ]
   }.
 
 insert_in_empty_ctx_returns_original_expr() ->
   E = str( "blub" ),
   ?assertEqual( E, in_hole( E, hole ) ).
+
+insert_traverses_cnd_if_expr() ->
+  E1 = true(),
+  Ctx = cnd( hole, str( "bla" ), str( "blub" ) ),
+  E2 = cnd( true(), str( "bla" ), str( "blub" ) ),
+  ?assertEqual( E2, in_hole( E1, Ctx ) ).
+
+insert_traverses_non_frn_app_fun_pos() ->
+  E1 = var( f ),
+  Ctx = app( hole, [] ),
+  E2 = app( var( f ), [] ),
+  ?assertEqual( E2, in_hole( E1, Ctx ) ).
+
+find_context_test_() ->
+  {foreach,
+
+   fun() -> ok end,
+   fun( _ ) -> ok end,
+
+   [
+    {"string string is no redex",
+     fun string_is_no_redex/0},
+
+    {"file is no redex",
+     fun file_is_no_redex/0},
+      
+    {"true is no redex",
+     fun true_is_no_redex/0},
+      
+    {"false is no redex",
+     fun false_is_no_redex/0},
+
+    {"conditional with true if expression is redex",
+     fun cnd_with_true_if_expr_is_redex/0},
+
+    {"conditional with false if expression is redex",
+     fun cnd_with_false_if_expr_is_redex/0},
+
+    {"find_context traverses conditional's if expression",
+     fun find_context_traverses_cnd_if_expr/0},
+
+    {"var is no redex",
+     fun var_is_no_redex/0},
+
+    {"native function is no redex",
+     fun lam_ntv_is_no_redex/0},
+
+    {"application with native function is redex",
+     fun app_with_lam_ntv_is_redex/0},
+
+    {"find_context traverses application's function position",
+     fun find_context_traverses_app_fn_pos/0}
+
+   ]}.
+    
+
+string_is_no_redex() ->
+  ?assertEqual( no_ctx, find_context( str( "blub" ) ) ).
+
+file_is_no_redex() ->
+  ?assertEqual( no_ctx, find_context( file( "blub" ) ) ).
+
+true_is_no_redex() ->
+  ?assertEqual( no_ctx, find_context( true() ) ).
+
+false_is_no_redex() ->
+  ?assertEqual( no_ctx, find_context( false() ) ).
+
+cnd_with_true_if_expr_is_redex() ->
+  E = cnd( true(), str( "bla" ), str( "blub" ) ),
+  ?assertEqual( {ok, E, hole}, find_context( E ) ).
+
+cnd_with_false_if_expr_is_redex() ->
+  E = cnd( false(), str( "bla" ), str( "blub" ) ),
+  ?assertEqual( {ok, E, hole}, find_context( E ) ).
+
+find_context_traverses_cnd_if_expr() ->
+  E = cnd( true(), true(), false() ),
+  Ctx = cnd( hole, str( "bla" ), str( "blub") ),
+  ?assertEqual( {ok, E, Ctx}, find_context( in_hole( E, Ctx ) ) ).
+
+var_is_no_redex() ->
+  ?assertEqual( no_ctx, find_context( var( x ) ) ).
+
+lam_ntv_is_no_redex() ->
+  ?assertEqual( no_ctx, find_context( e_lam1() ) ).
+
+app_with_lam_ntv_is_redex() ->
+  E = e_app_id(),
+  ?assertEqual( {ok, E, hole}, find_context( E ) ).
+
+find_context_traverses_app_fn_pos() ->
+  E = cnd( true(), e_lam_const(), e_lam_const() ),
+  Ctx = app( hole, [] ),
+  ?assertEqual( {ok, E, Ctx}, find_context( in_hole( E, Ctx ) ) ).
