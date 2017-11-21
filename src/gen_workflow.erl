@@ -27,12 +27,7 @@
 -include_lib( "gen_workflow.hrl" ).
 
 
-%%====================================================================
-%% Exports
-%%====================================================================
-
 -export( [run_expr/2, run_module/2] ).
--export( [init/1, is_value/2, recv/4, step/2] ).
 
 
 %%====================================================================
@@ -86,52 +81,5 @@ when is_integer( NWrk ), NWrk > 0 ->
   ok = application:stop( cre ),
 
   Result.
-
-
-%%====================================================================
-%% CRE client callback implementations
-%%====================================================================
-
--spec init( ClientArg :: _ ) -> [].
-
-init( _ClientArg ) -> [].
-
-
--spec is_value( E :: e(), UsrInfo :: _ ) -> boolean().
-
-is_value( E, _ ) ->
-  gen_workflow_sem:is_value( E ).
-
-
--spec recv( E, A, Delta, UsrInfo ) -> e()
-when E       :: e(),
-     A       :: e(),
-     Delta   :: e(),
-     UsrInfo :: _.
-
-recv( E, A, Delta, _UsrInfo ) ->
-  gen_workflow_sem:subst_fut( E, A, Delta ).
-
-
--spec step( E, UsrInfo ) -> Result
-when E       :: e(),
-     UsrInfo :: _,
-     Result  :: {ok, e()}
-              | {ok_send, e(), e()}
-              | norule.
-
-
-step( E, _UsrInfo ) ->
-  case gen_workflow_sem:find_context( E, hole ) of
-
-    {ok, E, Ctx} ->
-      E1 = gen_workflow_sem:reduce( E ),
-      E2 = gen_workflow_sem:in_hole( E1, Ctx ),
-      {ok, E2};
-
-    no_ctx ->
-      norule
-
-  end.
 
 
